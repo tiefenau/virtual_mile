@@ -2,6 +2,14 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import Websocket from 'react-websocket';
 import './index.css';
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route,
+  Link,
+  useRouteMatch,
+  useParams
+} from "react-router-dom";
 
   class TourGame extends React.Component {
     constructor(props){
@@ -41,9 +49,6 @@ import './index.css';
   }
 
   class TrinkerListe extends React.Component {
-    constructor(props){
-      super(props)  
-    }
 
     render() {
       return (
@@ -79,10 +84,85 @@ import './index.css';
     }
   }
 
+  class RouterWrapper extends React.Component {
+    render() {
+      return(
+        <Router>
+          <div>
+            <nav>
+              <ul>
+                <li>
+                  <Link to="/">Login</Link>
+                </li>
+                <li>
+                  <Link to="/game">Game</Link>
+                </li>
+              </ul>
+            </nav>
+
+            {/* A <Switch> looks through its children <Route>s and
+                renders the first one that matches the current URL. */}
+            <Switch>
+              <Route path="/">
+                <Login />
+              </Route>
+              <Route path="/game">
+                <TourGame />
+              </Route>
+            </Switch>
+          </div>
+        </Router>
+      )
+    }
+  }
+
+  class Login extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = {loginName: ''};
+      this.handleChange = this.handleChange.bind(this);
+      this.handleSubmit = this.handleSubmit.bind(this);
+    }
+
+    handleChange(event) {
+      this.setState({loginName: event.target.value});
+    }
+    
+    handleSubmit(event) {
+      var nameToSend = this.state.loginName
+      fetch('mileservice/its_me/' + encodeURIComponent(nameToSend), {//@todo chris url testen
+        method: 'POST',
+        dataType: 'json',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(nameToSend),
+      })
+      .then(response => response.json())
+      .then(response => {console.log(response)})
+      event.preventDefault();
+    }
+    
+    render() {
+      return(
+        <div className="loginField">
+          <h2>Login</h2>
+          <form onSubmit={this.handleSubmit}>
+            <label>
+              Name:
+              <input type="text" value={this.state.loginName} onChange={this.handleChange} />
+            </label>
+            <input type="submit" value="Submit" />
+          </form>
+        </div>
+      )
+    }
+  }
   // ========================================
   
   ReactDOM.render(
-    <TourGame />,
+    <RouterWrapper />,
     document.getElementById('root')
   );
   
