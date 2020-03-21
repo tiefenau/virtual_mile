@@ -7,14 +7,11 @@ from django.dispatch import receiver
 class Trinker(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
-    @receiver(post_save, sender=User)
-    def create_user_profile(sender, instance, created, **kwargs):
-        if created:
-            Trinker.objects.create(user=instance)
-
-    @receiver(post_save, sender=User)
-    def save_user_profile(sender, instance, **kwargs):
-        instance.trinker.save()
+class Pruegel(models.Model):
+    schlaeger = models.ForeignKey(Trinker, on_delete=models.DO_NOTHING,related_name='schlaeger')
+    geschlagen = models.ForeignKey(Trinker, on_delete=models.DO_NOTHING,related_name='geschlagen')
+    created_date = models.DateTimeField(default=timezone.now)
+#models.OneToOneField(User, on_delete=models.CASCADE)
 
 class Kneipe(models.Model):
     name = models.TextField()
@@ -27,7 +24,7 @@ class Steuerung(models.Model):
 
 
 class Bier(models.Model):
-    trinker = models.ForeignKey(Trinker, on_delete=models.CASCADE)
+    trinker = models.ForeignKey(Trinker, on_delete=models.CASCADE,related_name='biere')
     created_date = models.DateTimeField(default=timezone.now)
 
 class ReactionChallenge(models.Model):
@@ -46,4 +43,12 @@ class QuestionRound(models.Model):
 class QuestionAnswer(models.Model):
     trinker = models.ForeignKey(Trinker, on_delete=models.CASCADE)
     questionround = models.ForeignKey(QuestionRound, on_delete=models.CASCADE)
+    created_date = models.DateTimeField(default=timezone.now)
+
+class Busfahrt(models.Model):
+    created_date = models.DateTimeField(default=timezone.now)
+
+class Bussitzer(models.Model):
+    fahrt = models.ForeignKey(Busfahrt, on_delete=models.CASCADE)
+    fahrer = models.ForeignKey(Trinker, on_delete=models.DO_NOTHING)
     created_date = models.DateTimeField(default=timezone.now)

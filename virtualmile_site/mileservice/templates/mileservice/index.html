@@ -1,1 +1,177 @@
-Test {{ test }}
+<html>
+<head>
+  {% load static %}
+  <link rel="stylesheet" type="text/css" href="{% static "bootstrap.min.css" %}">
+  <script src="{% static "jquery.js" %}"></script>
+  <script src="{% static "bootstrap.bundle.min.js" %}"></script>
+
+  <script>
+        const roomName = "biers";
+        var hitaudio = new Audio('{% static "hit.mp3" %}');
+        var celebrateaudio = new Audio('{% static "celebrate.mp3" %}');
+        var noot = new Audio('{% static "noot.mp3" %}');
+        var mitfahrer = 0;
+        var fahrt_id = -1;
+        const chatSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/mileservice/'
+        );
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if(data.type=="hauen") {
+              $("#notification").show();
+              if(data.hit == "{{user.get_username}}"){
+                hitaudio.play();
+                if(data.hitter == "{{user.get_username}}"){
+                  $("#notification").html("Du Depp hast dich selbst geschlagen");
+                } else {
+                  $("#notification").html("Du wurdest geschlagen von "+data.hitter);
+                }
+              }
+              else {
+                $("#notification").html(data.hit+" wurde von "+data.hitter+" geschlagen");
+              }
+              //$("#notification").fadeOut(5000);
+              $("#"+data.hit+"-hit").html('<img style="height:14px" src="{% static "glove.png" %}" /> '+ data.newcount );
+            } else if (data.type=="trink") {
+              $("#notification-bier").show();
+              if(data.trinker == "{{user.get_username}}"){
+                $("#notification-bier").html("Gute Arbeit!");
+              } else {
+                tmp = "'";
+                $("#notification-bier").html(data.trinker + ' hat sein '+ data.newcount + ' Bier getrunken! <button class="btn btn-sm btn-danger" onclick="hau('+tmp+data.trinker+tmp+','+tmp+'{{user.get_username}}'+tmp+')">Eine reinschlagen!</button>');;
+              }
+
+              $("#"+data.trinker+"-bier").html('<img style="height:14px" src="{% static "beer.png" %}" /> '+ data.newcount );
+            } else if (data.type=="busstart"){
+              mitfahrer = 0;
+              fahrt_id = data.fahrt_id;
+              $("#busfahrn").modal();
+            } else if (data.type=="einstieg"){
+              $("#mitfahrers").append("<div style='position:absolute;left:"+(120+(60*mitfahrer++))+"px;top:113px;color:white;'>"+data.trinker+"</div>")
+            } else if (data.type=="losfahren"){
+              $("#busfahrn").modal('hide');
+              mitfahrer = 0;
+              fahrt_id = 0;
+              noot.play();
+            }
+
+            //$("#lol").html(data.message + '\n');
+        };
+
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+
+        function sendMessage(message) {
+            chatSocket.send(JSON.stringify({
+                'message': message
+            }));
+        };
+
+        function bier(){
+          celebrateaudio.play();
+          chatSocket.send(JSON.stringify({
+              'type': 'trink',
+              'trinker': '{{user.get_username}}'
+          }));
+        }
+
+        function hau(hit,hitter){
+          chatSocket.send(JSON.stringify({
+              'type': 'hauen',
+              'hauer': hitter,
+              'opfer': hit
+          }));
+        }
+
+        function start_bus(){
+          chatSocket.send(JSON.stringify({
+              'type': 'busstart',
+          }));
+        }
+
+        function einsteigen(){
+          chatSocket.send(JSON.stringify({
+              'type': 'einsteigen',
+              'fahrt_id': fahrt_id ,
+              'fahrer': '{{user.get_username}}'
+          }));
+        }
+
+        function losfahren(){
+          chatSocket.send(JSON.stringify({
+              'type': 'losfahren',
+          }));
+        }
+        $(function() {
+            //$("#notification").hide();
+        });
+    </script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="row" style="height:250px;">
+      <div class="col-md-12">VIRTUELLE MEILE IN HD</div>
+      <div class="col-md-12">
+        <div class="alert alert-success" role="alert" id="notification-bier">Hallo!</div>
+        <div class="alert alert-warning" role="alert" id="notification">&nbsp;</div>
+      </div>
+      <div class="col-md-12"><button class="btn btn-block btn-primary" onclick="bier()">BIER GEÖFFNET</button></div>
+      </div>
+    <div class="row">
+      <div class="col-md-4">
+        <ul class="list-group">
+          {% for t in trinker %}
+            <ul onclick="hau('{{ t.user }}','{{user.get_username}}')" class="list-group-item justify-content-between list-group-item-action">
+                {{ t.user }}
+                <span class="badge badge-warning badge-pill float-right" id="{{ t.user }}-hit"><img style="height:14px" src="{% static "glove.png" %}" /> {{t.geschlagen.count}}</span>
+                <span class="badge badge-pill badge-success float-right" id="{{ t.user }}-bier"><img style="height:14px" src="{% static "beer.png" %}" /> {{t.biere.count}}</span>
+                <!--<div class="col-md-4"><img style="height:24px" src="{% static "glove.png" %}" /></div>-->
+              </ul>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="col-md-8">
+
+
+      </div>
+    </div>
+    {% if user.get_username == 'Achim' %}
+    <div class="row">
+
+      <div class="col-md-12"><hr>Achims' Admin Areal</div>
+      <div class="col-md-4"><button class="btn btn-block btn-primary" onclick="start_bus();">Starte Busfahrt!</button></div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="busfahrn" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"  role="document">
+      <div class="modal-content" style="width:700px;">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLongTitle">Modal title</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="mitfahrers"></div>
+          <input type="hidden" id="busfahrt_id" value="-1">
+          <img src="{% static "bus.png" %}"/>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary btn-block" onclick="einsteigen()">Einsteigen</button>
+          {% if user.get_username == 'Achim' %}
+            <button type="button" class="btn btn-danger btn-block" onclick="losfahren()">Losfahren</button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
